@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#f6f5f1" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#14161a" media="(prefers-color-scheme: dark)">
+<script>window.APPVER="da9fc0b0ee17";</script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -572,6 +573,48 @@
     .cmpbar{bottom:calc(70px + env(safe-area-inset-bottom))}
     .cmpbar:not(.show){transform:translateY(calc(100% + 100px));pointer-events:none}
   }
+  /* ── 2026-11-22b: 폰 첫 화면 정리(분류·정렬은 필터 시트로) + 검색줄 고정 + 새 데이터 알림 + 설치 안내 ── */
+  button,.chip,.tabin{-webkit-touch-callout:none}
+  .srow{display:flex;gap:8px;align-items:stretch}
+  .srow .search{flex:1;min-width:0}
+  .srow .filterbtn{padding:0 15px;font-weight:500}
+  .fsum{display:none}
+  .vtgl{display:none}
+  .search input::-webkit-search-cancel-button{-webkit-appearance:none;appearance:none}
+  #fltCtl.insheet{margin:2px 0 6px}
+  #fltCtl.insheet .rowlabel{font-size:14px;font-weight:700;color:var(--ink);margin:16px 0 8px}
+  #fltCtl.insheet .rowlabel small{font-weight:400;color:var(--muted);font-size:11px;margin-left:4px}
+  #fltCtl.insheet .chips{flex-wrap:wrap;overflow:visible;margin:0;padding:0;scroll-snap-type:none}
+  .fsec{font-size:14px;font-weight:700;margin:20px 0 2px;padding-top:14px;border-top:1px solid var(--line)}
+  .upbar{position:fixed;left:12px;right:12px;max-width:520px;margin:0 auto;bottom:calc(16px + env(safe-area-inset-bottom));z-index:30;display:flex;align-items:center;gap:10px;padding:10px 10px 10px 16px;border-radius:14px;background:var(--ink);color:var(--bg);font-size:14px;box-shadow:var(--shadow);animation:upIn .25s ease-out}
+  .upbar[hidden]{display:none}
+  .upbar span{flex:1}
+  .upbar button{border:0;border-radius:10px;background:var(--accent);color:var(--accent-ink);font:inherit;font-size:14px;font-weight:700;padding:8px 14px;cursor:pointer}
+  @keyframes upIn{from{transform:translateY(16px);opacity:0}to{transform:none;opacity:1}}
+  .inst{display:flex;align-items:flex-start;gap:10px;margin:14px 0 2px;padding:12px 10px 12px 14px;border-radius:14px;background:var(--card);border:1px solid var(--line);font-size:13px;line-height:1.55}
+  .inst-t{flex:1;display:flex;flex-direction:column;gap:2px}
+  .inst-t span{color:var(--muted)} .inst-t span b{color:var(--ink);font-weight:500}
+  .inst-go{border:0;border-radius:10px;background:var(--accent);color:var(--accent-ink);font:inherit;font-size:14px;font-weight:700;padding:8px 14px;cursor:pointer;align-self:center}
+  .inst-x{border:0;background:none;color:var(--muted);font-size:16px;padding:2px 4px;cursor:pointer}
+  @media (max-width:759px){
+    .sbar{position:sticky;top:calc(46px + env(safe-area-inset-top));z-index:9;margin-left:-16px;margin-right:-16px;padding:8px 16px;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);transition:box-shadow .2s}
+    .sbar.stuck{box-shadow:0 1px 0 var(--line)}
+    .fsum{display:flex;align-items:center;gap:6px;width:100%;border:0;background:none;padding:8px 2px 0;font:inherit;font-size:13px;color:var(--muted);cursor:pointer;text-align:left;white-space:nowrap;overflow:hidden}
+    .fsum b{color:var(--ink);font-weight:500}
+    .fsum .chg{margin-left:auto;color:var(--accent);font-weight:500;flex:none}
+    #hint{display:none}
+    .toolrow{display:none}
+    .vtgl{display:block}
+    .idxrow{margin-top:12px}
+    .idx{padding:10px 12px 8px}
+    .idx svg{height:24px;margin-top:4px}
+    #events .evt{display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;min-width:0}
+    #events .evt .dt,#events .evt b,#events .evt small{display:inline;margin:0;white-space:nowrap}
+    #events .evt b{font-size:13px}
+    #events .evt small{font-size:11px}
+    #colSeg{margin-top:4px}
+    .upbar{bottom:calc(70px + env(safe-area-inset-bottom))}
+  }
   @media (min-width:760px){ .tabin svg,.tabin .sl,.appbar{display:none} }
 </style>
 </head>
@@ -603,19 +646,25 @@
   <div id="eventsBox"><div class="sechead"><span>다가오는 일정 · 2주 이내</span><span id="evCount"></span></div><div class="events hscroll" id="events"></div></div>
   <div class="toolrow">
     <div class="seg viewseg" id="viewSeg" style="margin-top:0"><button data-v="table">순위표</button><button data-v="map">시장 지도</button></div>
-    <button class="filterbtn" id="filterBtn">필터</button>
   </div>
 
-  <div class="controls" style="margin-top:12px">
-    <div class="search" id="searchBox">
-      <input type="search" id="q" placeholder="회사명·티커 검색 (예: 애플, NVDA)" autocomplete="off" enterkeyhint="search">
-      <button type="button" id="clearQ" aria-label="검색어 지우기">×</button>
+  <div class="controls sbar" id="sbar" style="margin-top:12px">
+    <div class="srow">
+      <div class="search" id="searchBox">
+        <input type="search" id="q" placeholder="회사명·티커 검색 (예: 애플, NVDA)" autocomplete="off" enterkeyhint="search">
+        <button type="button" id="clearQ" aria-label="검색어 지우기">×</button>
+      </div>
+      <button type="button" class="filterbtn vtgl" id="vTgl">지도</button>
+      <button class="filterbtn" id="filterBtn">필터</button>
     </div>
-    <div class="rowlabel">분류 · 옆으로 넘겨서 선택 (관심종목은 종목 화면 위쪽 ☆로 담아요)</div>
-    <div class="chips hscroll" id="sectorChips"></div>
-    <div class="chips hscroll" id="themeChips" hidden style="display:none"></div>
-    <div class="rowlabel">정렬 · 한 번 더 누르면 순서가 뒤집혀요</div>
-    <div class="chips hscroll" id="sortChips"></div>
+    <button type="button" class="fsum" id="fsum"></button>
+    <div id="fltCtl">
+      <div class="rowlabel">분류 · 옆으로 넘겨서 선택 <small>(관심종목은 종목 화면 위쪽 ☆로 담아요)</small></div>
+      <div class="chips hscroll" id="sectorChips"></div>
+      <div class="chips hscroll" id="themeChips" hidden style="display:none"></div>
+      <div class="rowlabel">정렬 <small>한 번 더 누르면 순서가 뒤집혀요</small></div>
+      <div class="chips hscroll" id="sortChips"></div>
+    </div>
   </div>
 
   <div id="tableView">
@@ -1094,7 +1143,7 @@ function renderFilterSheet(){
 }
 function updFltCount(){
   const n=DATA.filter(passFilters).length, a=activeFilters().length;
-  $("fltApply").textContent = a ? `조건에 맞는 ${n}개 보기` : "닫기";
+  $("fltApply").textContent = a ? `조건에 맞는 ${n}개 보기` : "결과 보기";
   $("filterBtn").textContent = a ? `필터 ${a}` : "필터";
   $("filterBtn").classList.toggle("on", a>0);
 }
@@ -2699,6 +2748,62 @@ $("techChips").addEventListener("click",e=>{ const b=e.target.closest(".chip"); 
 ["rangeSeg","idxSeg","cmpSeg"].forEach(id=>$(id).innerHTML=segR());
 if(!RLAB[range]) range="1y"; if(!RLAB[idxRange]) idxRange="1y"; if(!RLAB[cmpRange]) cmpRange="1y";
 setCView(cview); renderMarket();
+/* ── 2026-11-22b: 폰 첫 화면 정리 · 검색줄 고정 · 새 데이터 알림 · 설치 안내 ── */
+(function(){
+  const mq=matchMedia("(max-width:759px)"), ctl=$("fltCtl"), home=$("sbar"), sh=$("fltSheet"), pre=$("presets");
+  const h2=$("fltTitle"), sub=sh.querySelector(".sh-top .sub"), T0=h2.textContent, S0=sub?sub.textContent:"";
+  const sec=document.createElement("div"); sec.className="fsec"; sec.textContent="조건으로 거르기 (스크리너)";
+  function place(){
+    if(mq.matches){ if(ctl.parentNode!==sh){ sh.insertBefore(ctl,pre); sh.insertBefore(sec,pre); }
+      $("q").placeholder="회사명·티커 검색";
+      ctl.classList.add("insheet"); h2.textContent="분류·정렬·필터"; if(sub) sub.textContent="고르면 순위표에 바로 반영돼요"; }
+    else { if(ctl.parentNode!==home){ home.appendChild(ctl); sec.remove(); }
+      $("q").placeholder="회사명·티커 검색 (예: 애플, NVDA)";
+      ctl.classList.remove("insheet"); h2.textContent=T0; if(sub) sub.textContent=S0; }
+  }
+  mq.addEventListener?mq.addEventListener("change",place):mq.addListener(place); place();
+  const E=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  function fsum(){ const s=$("sectorChips").querySelector(".chip.on"), o=$("sortChips").querySelector(".chip.on"), n=activeFilters().length;
+    const p=[]; if(s) p.push("분류 <b>"+E(s.textContent.trim().replace(/\s+/g," "))+"</b>"); if(o) p.push("정렬 <b>"+E(o.textContent.trim())+"</b>"); if(n) p.push("조건 <b>"+n+"개</b>");
+    $("fsum").innerHTML="<span>"+p.join(" · ")+'</span><span class="chg">바꾸기</span>'; }
+  ["sectorChips","sortChips","filterBtn"].forEach(id=>new MutationObserver(fsum).observe($(id),{childList:true,subtree:true,characterData:true}));
+  $("fsum").addEventListener("click",openFlt); fsum();
+  const vt=()=>{ $("vTgl").textContent=view==="map"?"순위표":"지도"; };
+  const _sv=setView; setView=function(v){ _sv(v); vt(); };
+  $("vTgl").addEventListener("click",()=>setView(view==="map"?"table":"map")); vt();
+  const stTop=()=>parseFloat(getComputedStyle(home).top)||0;
+  function stuck(){ home.classList.toggle("stuck", mq.matches && !$("tabStocks").hidden && home.getBoundingClientRect().top<=stTop()+0.5); }
+  addEventListener("scroll",stuck,{passive:true});
+  $("q").addEventListener("input",()=>{ if(!home.classList.contains("stuck")) return;
+    const tv=$(view==="map"?"mapView":"tableView"), y=tv.getBoundingClientRect().top+scrollY-home.offsetHeight-stTop()-6;
+    if(scrollY>y) scrollTo(0,y); });
+
+  if(!window.APPVER) return;   // 아래는 GitHub 앱 사이트에서만 (pwa.py가 APPVER를 넣음)
+  const bar=document.createElement("div"); bar.className="upbar"; bar.hidden=true;
+  bar.innerHTML='<span>새 데이터가 올라왔어요</span><button type="button">새로고침</button>'; document.body.appendChild(bar);
+  bar.querySelector("button").addEventListener("click",async e=>{ e.target.textContent="불러오는 중…";
+    try{ const r=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration(); if(r) await r.update();
+      if(window.caches){ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); } }catch(_){}
+    location.reload(); });
+  let last=0;
+  async function chk(){ if(Date.now()-last<60000) return; last=Date.now();
+    try{ const r=await fetch("version.json?t="+Date.now(),{cache:"no-store"}); if(!r.ok) return; const j=await r.json(); if(j.v&&j.v!==window.APPVER) bar.hidden=false; }catch(_){} }
+  setTimeout(chk,1500); document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") chk(); }); setInterval(chk,15*60*1000);
+
+  const sa=matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
+  if(sa||store.get("mc-inst-x")) return;
+  const ios=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+  const c=document.createElement("div"); c.className="inst";
+  c.innerHTML='<div class="inst-t"><b>홈 화면에 추가하면 앱처럼 열려요</b><span>'+(ios
+    ?'Safari 아래쪽 <b>공유 버튼</b>(네모에 위 화살표) → <b>홈 화면에 추가</b>를 누르세요. 주소창 없이 전체 화면으로 열려요.'
+    :'브라우저 메뉴(⋮) → <b>홈 화면에 추가</b> 또는 <b>앱 설치</b>를 누르세요. 주소창 없이 전체 화면으로 열려요.')
+    +'</span></div><button type="button" class="inst-go" hidden>설치</button><button type="button" class="inst-x" aria-label="닫기">✕</button>';
+  $("tabStocks").querySelector(".hdr").after(c);
+  c.querySelector(".inst-x").addEventListener("click",()=>{ c.remove(); store.set("mc-inst-x","1"); });
+  addEventListener("beforeinstallprompt",e=>{ e.preventDefault(); const g=c.querySelector(".inst-go"); g.hidden=false;
+    g.onclick=async()=>{ e.prompt(); try{ const r=await e.userChoice; if(r.outcome==="accepted") c.remove(); }catch(_){} }; });
+  addEventListener("appinstalled",()=>c.remove());
+})();
 renderSectorChips(); renderThemeChips(); renderSortChips(); render(); setView(view); renderCmpBar(); renderEvents(); updFltCount(); renderIdxRow(); setTab(["news","strat","bt"].includes(tab)?tab:"stocks");
 </script>
 </body>
